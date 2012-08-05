@@ -8,6 +8,8 @@ import org.andengine.engine.options.resolutionpolicy.FillResolutionPolicy;
 import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
+import org.andengine.entity.sprite.AnimatedSprite;
+import org.andengine.entity.sprite.AnimatedSprite.IAnimationListener;
 import org.andengine.entity.util.FPSLogger;
 import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.TextureManager;
@@ -20,9 +22,11 @@ import org.andengine.ui.activity.BaseGameActivity;
 import android.util.Log;
 
 import com.makersf.andengine.extension.collisions.CollisionLogger;
+import com.makersf.andengine.extension.collisions.entity.sprite.PixelPerfectAnimatedSprite;
 import com.makersf.andengine.extension.collisions.entity.sprite.PixelPerfectSprite;
 import com.makersf.andengine.extension.collisions.opengl.texture.region.PixelPerfectTextureRegion;
 import com.makersf.andengine.extension.collisions.opengl.texture.region.PixelPerfectTextureRegionFactory;
+import com.makersf.andengine.extension.collisions.opengl.texture.region.PixelPerfectTiledTextureRegion;
 
 public class MainActivity extends BaseGameActivity {
 	
@@ -35,10 +39,12 @@ public class MainActivity extends BaseGameActivity {
     private BitmapTextureAtlas diamondTexture;
     
     private PixelPerfectTextureRegion starRegion;
+    private PixelPerfectTiledTextureRegion trireg;
     
     private CollisionLogger logger;
     private PixelPerfectSprite star1;
     private PixelPerfectSprite star2;
+    private PixelPerfectAnimatedSprite spintri;
     
 	@Override
 	public EngineOptions onCreateEngineOptions() {
@@ -56,8 +62,10 @@ public class MainActivity extends BaseGameActivity {
 		PixelPerfectTextureRegionFactory.setAssetBasePath("gfx/");
         BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
 
-        this.diamondTexture = new BitmapTextureAtlas(textureManager, 1024, 256, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-        this.starRegion = PixelPerfectTextureRegionFactory.createFromAsset(diamondTexture, this, "star.png", 200, 0, ALPHA_THERSHOLD);
+        this.diamondTexture = new BitmapTextureAtlas(textureManager, 2048, 512, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+        this.starRegion = PixelPerfectTextureRegionFactory.createFromAsset(diamondTexture, this, "star.png", 0, 0, ALPHA_THERSHOLD);
+        
+        this.trireg = PixelPerfectTextureRegionFactory.createTiledFromAsset(diamondTexture, this, "spinning-triangle.png", 0, 200, 20, 1, 0);
 
         this.diamondTexture.load();
         
@@ -106,15 +114,64 @@ public class MainActivity extends BaseGameActivity {
 		public boolean onAreaTouched(TouchEvent pSceneTouchEvent,
 				float pTouchAreaLocalX, float pTouchAreaLocalY) {
 			star2.setRotation(star2.getRotation() + 1);
+			spintri.setRotation(spintri.getRotation() + 1);
 			return true;
 		}
     	   
        };
        
-       mScene.attachChild(star1);
-       mScene.attachChild(star2);
-       mScene.registerTouchArea(star2);
-       mScene.registerTouchArea(roatator);
+       	mScene.attachChild(star1);
+       	mScene.attachChild(star2);
+       	mScene.registerTouchArea(star2);
+       	mScene.registerTouchArea(roatator);
+       
+       	spintri = new PixelPerfectAnimatedSprite(150, 200, trireg, VBOmanager);
+       	spintri.animate(1000, new IAnimationListener() {
+			
+			@Override
+			public void onAnimationStarted(AnimatedSprite pAnimatedSprite,
+					int pInitialLoopCount) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void onAnimationLoopFinished(AnimatedSprite pAnimatedSprite,
+					int pRemainingLoopCount, int pInitialLoopCount) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void onAnimationFrameChanged(AnimatedSprite pAnimatedSprite,
+					int pOldFrameIndex, int pNewFrameIndex) {
+				logger.startCollisionCheck();
+				boolean collisionResult = spintri.collidesWith(star1);
+				logger.endCollisionCheck(collisionResult);
+				if(collisionResult) {
+					Log.i("SPINTRI LOGGER", "TRIANGLE COLLIDES WITH STAR1");
+				}
+				else {
+					Log.i("SPINTRI LOGGER", "TRIANGLE DO NOT COLLIDES WITH STAR1");
+				}
+				logger.startCollisionCheck();
+				collisionResult = spintri.collidesWith(star2);
+				logger.endCollisionCheck(collisionResult);
+				if(collisionResult) {
+					Log.i("SPINTRI LOGGER", "TRIANGLE COLLIDES WITH STAR2");
+				}
+				else {
+					Log.i("SPINTRI LOGGER", "TRIANGLE DO NOT COLLIDES WITH STAR2");
+				}
+			}
+			
+			@Override
+			public void onAnimationFinished(AnimatedSprite pAnimatedSprite) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+       mScene.attachChild(spintri);
        
        pOnCreateSceneCallback.onCreateSceneFinished(mScene);
 		
@@ -144,6 +201,18 @@ public class MainActivity extends BaseGameActivity {
 				logger.endCollisionCheck(collisionResult);
 				if(collisionResult) {
 					Log.i("STAR LOGGER", "STAR1 COLLIDES WITH STAR2");
+				}
+				logger.startCollisionCheck();
+				boolean collisionResult1 = star1.collidesWith(spintri);
+				logger.endCollisionCheck(collisionResult);
+				if(collisionResult1) {
+					Log.i("STAR LOGGER", "STAR1 COLLIDES WITH SPINTRI");
+				}
+				logger.startCollisionCheck();
+				boolean collisionResult2 = star2.collidesWith(spintri);
+				logger.endCollisionCheck(collisionResult);
+				if(collisionResult2) {
+					Log.i("STAR LOGGER", "STAR2 COLLIDES WITH SPINTRI");
 				}
 				logger.printStatistics(false);
 			}
